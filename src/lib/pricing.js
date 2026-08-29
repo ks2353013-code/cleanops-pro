@@ -1,0 +1,5 @@
+const FACILITY_MULTIPLIER={SCHOOL:1,HOSPITAL:1.45,OFFICE:.9,HOTEL:1.25,FACTORY:1.3,WAREHOUSE:.8,RETAIL:1,GYM:1};
+const FREQUENCY_FACTOR={ONE_TIME:1,WEEKLY:.92,BIWEEKLY:.88,MONTHLY:.82,DAILY:.72};
+export function calculateQuote({areaSqFt=0,facilityType='OFFICE',frequency='ONE_TIME',hoursPerVisit=0,workers=0,laborRate=250,consumables=0,equipment=0,supervision=0,margin=0.2}){
+ const area=Math.max(0,Number(areaSqFt)); const baseHours=Number(hoursPerVisit)||Math.max(1,area/1800); const labor=Math.max(0,baseHours*Number(workers||1)*Number(laborRate)); const direct=labor+Number(consumables||0)+Number(equipment||0)+Number(supervision||0); const adjusted=direct*(FACILITY_MULTIPLIER[String(facilityType).toUpperCase()]||1)*(FREQUENCY_FACTOR[String(frequency).toUpperCase()]||1); const price=adjusted/(1-Math.min(.8,Math.max(0,Number(margin)))); return {estimatedHours:Number(baseHours.toFixed(2)),labor:Number(labor.toFixed(2)),directCost:Number(adjusted.toFixed(2)),margin:Number(margin),recommendedPrice:Number(price.toFixed(2))};
+}
