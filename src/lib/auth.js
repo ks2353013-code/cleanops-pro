@@ -1,47 +1,18 @@
 import { cookies } from 'next/headers';
+import crypto from 'node:crypto';
+import { db } from './db';
 
-const COOKIE = 'cleanops_session';
-const secret = () => new TextEncoder().encode(process.env.SESSION_SECRET || 'change-this-in-production');
+const COOKIE='cleanops_session';
+const secret=()=>process.env.SESSION_SECRET||process.env.AUTH_SECRET||'change-this-in-production';
+const b64=(v)=>Buffer.from(v).toString('base64url');
+const unb64=(v)=>Buffer.from(v,'base64url');
 
-function toBase64(bytes) { return Buffer.from(bytes).toString('base64url'); }
-function fromBase64(value) { return new Uint8Array(Buffer.from(value, 'base64url')); }
-
-export async function hashPassword(password, salt = crypto.getRandomValues(new Uint8Array(16))) {
-  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 120000, hash: 'SHA-256' }, material, 256);
-  return `${toBase64(salt)}.${toBase64(new Uint8Array(bits))}`;
-}
-
-export async function verifyPassword(password, stored) {
-  const [salt, expected] = String(stored).split('.');
-  if (!salt || !expected) return false;
-  const actual = await hashPassword(password, fromBase64(salt));
-  return actual === `${salt}.${expected}`;
-}
-
-export async function createSession(payload) {
-  const body = toBase64(new TextEncoder().encode(JSON.stringify({ ...payload, exp: Date.now() + 1000 * 60 * 60 * 12 })));
-  const key = await crypto.subtle.importKey('raw', secret(), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = toBase64(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body))));
-  const store = await cookies();
-  store.set(COOKIE, `${body}.${sig}`, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 12 });
-}
-
-export async function getSession() {
-  const store = await cookies();
-  const raw = store.get(COOKIE)?.value;
-  if (!raw) return null;
-  const [body, sig] = raw.split('.');
-  try {
-    const key = await crypto.subtle.importKey('raw', secret(), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
-    const ok = await crypto.subtle.verify('HMAC', key, fromBase64(sig), new TextEncoder().encode(body));
-    if (!ok) return null;
-    const data = JSON.parse(new TextDecoder().decode(fromBase64(body)));
-    return data.exp > Date.now() ? data : null;
-  } catch { return null; }
-}
-
-export async function destroySession() {
-  const store = await cookies();
-  store.delete(COOKIE);
-}
+export function hashPassword(password){const salt=crypto.randomBytes(16);const hash=crypto.pbkdf2Sync(password,salt,120000,64,'sha512');return `${b64(salt)}.${b64(hash)}`;}
+export function verifyPassword(password,stored){try{const [s,e]=String(stored).split('.');const actual=crypto.pbkdf2Sync(password,unb64(s),120000,64,'sha512');return crypto.timingSafeEqual(actual,unb64(e));}catch{return false;}}
+export function signSession(payload){const body=b64(Buffer.from(JSON.stringify({...payload,iat:Date.now(),exp:Date.now()+1000*60*60*12})));const sig=crypto.createHmac('sha256',secret()).update(body).digest('base64url');return `${body}.${sig}`;}
+export function verifySession(token){try{const [body,sig]=String(token).split('.');if(!body||!sig)return null;const expected=crypto.createHmac('sha256',secret()).update(body).digest('base64url');if(!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected)))return null;const data=JSON.parse(unb64(body));return data.exp>Date.now()?data:null;}catch{return null;}}
+export async function createSession(payload){const store=await cookies();store.set(COOKIE,signSession(payload),{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:60*60*12});}
+export async function getSession(){const store=await cookies();const raw=store.get(COOKIE)?.value;const s=verifySession(raw);if(!s?.userId)return null;return db.user.findUnique({where:{id:s.userId},select:{id:true,name:true,email:true,role:true,organizationId:true,active:true}}).then(u=>u?.active?u:null);}
+export async function requireUser(){const u=await getSession();if(!u)throw new Error('UNAUTHENTICATED');return u;}
+export async function destroySession(){const store=await cookies();store.delete(COOKIE);}
+export {COOKIE};
