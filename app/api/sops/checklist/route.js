@@ -1,0 +1,2 @@
+import { buildChecklist, scoreChecklist } from '../../../../src/lib/sop-engine';
+export async function POST(req){try{const b=await req.json();if(!b.facilityType)return Response.json({error:'facilityType is required'},{status:400});const items=Array.isArray(b.items)&&b.items.length?b.items:buildChecklist(b);return Response.json({data:{items,score:scoreChecklist(items)}});}catch{return Response.json({error:'Unable to build checklist'},{status:400});}}
