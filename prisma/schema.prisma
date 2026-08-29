@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role { PLATFORM_ADMIN OPERATIONS_MANAGER SUPERVISOR CLIENT_MANAGER PROFESSIONAL }
+enum FacilityType { SCHOOL HOSPITAL OFFICE HOTEL FACTORY WAREHOUSE RETAIL RESIDENTIAL OTHER }
+enum RequestStatus { NEW ASSESSMENT QUOTED APPROVED REJECTED CONVERTED CANCELLED }
+enum ContractStatus { DRAFT ACTIVE PAUSED EXPIRED TERMINATED }
+enum JobStatus { SCHEDULED CHECKED_IN IN_PROGRESS INSPECTION COMPLETED MISSED CANCELLED }
+enum WorkerStatus { PENDING VERIFIED ACTIVE SUSPENDED INACTIVE }
+
+model Organization {
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  users       User[]
+  facilities  Facility[]
+  requests    ServiceRequest[]
+  contracts   Contract[]
+  invoices    Invoice[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String       @unique
+  passwordHash   String
+  role           Role
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  worker         Worker?
+}
+
+model Facility {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  type           FacilityType
+  address        String
+  areaSqFt       Int?
+  operatingHours String?
+  riskProfile    String?
+  createdAt      DateTime     @default(now())
+  requests       ServiceRequest[]
+  contracts      Contract[]
+  jobs           Job[]
+}
+
+model ServiceRequest {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  facilityId     String
+  facility       Facility      @relation(fields: [facilityId], references: [id])
+  serviceName    String
+  requirements   String?
+  preferredDate  DateTime?
+  status         RequestStatus  @default(NEW)
+  createdAt      DateTime      @default(now())
+  quotes         Quote[]
+}
+
+model Quote {
+  id             String         @id @default(cuid())
+  requestId      String
+  request        ServiceRequest @relation(fields: [requestId], references: [id])
+  monthlyValue   Decimal        @db.Decimal(12,2)
+  setupFee       Decimal        @default(0) @db.Decimal(12,2)
+  staffingCount  Int
+  frequency      String
+  slaSummary     String?
+  validUntil     DateTime
+  approvedAt     DateTime?
+  createdAt      DateTime       @default(now())
+}
+
+model Contract {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  facilityId     String
+  facility       Facility       @relation(fields: [facilityId], references: [id])
+  name           String
+  status         ContractStatus @default(DRAFT)
+  monthlyValue   Decimal        @db.Decimal(12,2)
+  startDate      DateTime
+  endDate        DateTime?
+  createdAt      DateTime       @default(now())
+  jobs           Job[]
+}
+
+model Worker {
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  user           User         @relation(fields: [userId], references: [id])
+  classification String
+  specialization String?
+  status         WorkerStatus @default(PENDING)
+  rating         Decimal      @default(0) @db.Decimal(3,2)
+  jobsCompleted  Int          @default(0)
+  verifiedAt     DateTime?
+  jobs           Job[]
+}
+
+model Job {
+  id             String      @id @default(cuid())
+  facilityId     String
+  facility       Facility    @relation(fields: [facilityId], references: [id])
+  contractId     String?
+  contract       Contract?   @relation(fields: [contractId], references: [id])
+  workerId       String?
+  worker         Worker?     @relation(fields: [workerId], references: [id])
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+  status         JobStatus   @default(SCHEDULED)
+  checklistData  Json?
+  checkInAt      DateTime?
+  checkOutAt     DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime    @default(now())
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  contractId     String?
+  amount         Decimal      @db.Decimal(12,2)
+  currency       String       @default("INR")
+  status         String       @default("ISSUED")
+  dueDate        DateTime
+  paidAt         DateTime?
+  createdAt      DateTime     @default(now())
+}
+
+model AuditEvent {
+  id             String   @id @default(cuid())
+  organizationId String?
+  actorUserId    String?
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  @@index([organizationId, createdAt])
+}
