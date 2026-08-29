@@ -1,0 +1,2 @@
+import { rankWorkers } from '../../../../src/lib/workforce';
+export async function POST(req){try{const b=await req.json();if(!b.facilityType||!Array.isArray(b.workers))return Response.json({error:'facilityType and workers are required'},{status:400});const data=rankWorkers(b.workers,b.facilityType).slice(0,20);return Response.json({data,count:data.length});}catch{return Response.json({error:'Unable to recommend workforce'},{status:400});}}
