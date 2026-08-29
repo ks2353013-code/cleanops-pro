@@ -1,0 +1,1 @@
+export async function POST(req){const b=await req.json(); if(!b.jobId||!b.workerId) return Response.json({error:'jobId and workerId are required'},{status:400}); return Response.json({data:{jobId:b.jobId,workerId:b.workerId,checkedInAt:new Date().toISOString(),status:'checked_in'}});}
