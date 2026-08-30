@@ -12,7 +12,7 @@ COPY package.json ./
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY . .
-RUN npx prisma generate
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" npx prisma generate
 RUN npm run build
 
 FROM node:22-alpine AS runner
