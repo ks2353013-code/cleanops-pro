@@ -185,14 +185,14 @@ model Contract {
 }
 
 model Worker {
-  id             String       @id @default(cuid())
-  userId         String       @unique
-  user           User         @relation(fields: [userId], references: [id])
+  id             String        @id @default(cuid())
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id])
   classification String
   specialization String?
-  status         WorkerStatus @default(PENDING)
-  rating         Decimal      @default(0) @db.Decimal(3, 2)
-  jobsCompleted  Int          @default(0)
+  status         WorkerStatus  @default(PENDING)
+  rating         Decimal       @default(0) @db.Decimal(3, 2)
+  jobsCompleted  Int           @default(0)
   verifiedAt     DateTime?
   jobs           Job[]
   reworks        Rework[]
