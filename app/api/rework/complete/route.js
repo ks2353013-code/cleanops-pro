@@ -10,13 +10,15 @@ export async function POST(req) {
     const body = await req.json();
     if (!body.reworkId) return Response.json({ error: 'reworkId is required' }, { status: 400 });
 
+    const worker = user.role === 'PROFESSIONAL' ? await prisma.worker.findUnique({ where: { userId: user.id } }) : null;
+    if (user.role === 'PROFESSIONAL' && !worker) return Response.json({ error: 'Worker profile required' }, { status: 403 });
     const rework = await prisma.rework.findFirst({
       where: { id: body.reworkId, ...(user.role === 'PLATFORM_ADMIN' ? {} : { organizationId: user.organizationId }) },
       include: { job: { include: { facility: true } }, inspection: true }
     });
     if (!rework) return Response.json({ error: 'Rework not found' }, { status: 404 });
     if (['COMPLETED', 'CANCELLED'].includes(rework.status)) return Response.json({ error: 'Rework is already closed' }, { status: 409 });
-    if (user.role === 'PROFESSIONAL' && rework.assignedWorkerId !== user.worker?.id) return Response.json({ error: 'Rework is not assigned to you' }, { status: 403 });
+    if (user.role === 'PROFESSIONAL' && rework.assignedWorkerId !== worker.id) return Response.json({ error: 'Rework is not assigned to you' }, { status: 403 });
 
     const organizationId = rework.job.facility.organizationId;
     const updated = await prisma.$transaction(async (tx) => {
