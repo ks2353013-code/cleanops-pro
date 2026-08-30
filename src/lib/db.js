@@ -1,5 +1,3 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
-const globalForPrisma = globalThis;
-export const db = globalForPrisma.__cleanopsPrisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.__cleanopsPrisma = db;
+export const db = prisma;
