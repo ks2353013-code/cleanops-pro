@@ -5,8 +5,23 @@ on:
   pull_request:
     branches: [main]
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cleanops
+          POSTGRES_PASSWORD: cleanops
+          POSTGRES_DB: cleanops_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cleanops -d cleanops_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://cleanops:cleanops@localhost:5432/cleanops_test
+      SESSION_SECRET: ci-only-secret-change-me
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,4 +30,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm test
       - run: npm run build
