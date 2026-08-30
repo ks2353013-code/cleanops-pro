@@ -11,145 +11,214 @@ enum Role { PLATFORM_ADMIN OPERATIONS_MANAGER SUPERVISOR CLIENT_MANAGER PROFESSI
 enum FacilityType { SCHOOL HOSPITAL OFFICE HOTEL FACTORY WAREHOUSE RETAIL RESIDENTIAL OTHER }
 enum RequestStatus { NEW ASSESSMENT QUOTED APPROVED REJECTED CONVERTED CANCELLED }
 enum ContractStatus { DRAFT ACTIVE PAUSED EXPIRED TERMINATED }
-enum JobStatus { SCHEDULED CHECKED_IN IN_PROGRESS INSPECTION COMPLETED MISSED CANCELLED }
+enum JobStatus { SCHEDULED CHECKED_IN IN_PROGRESS INSPECTION REWORK REQUIRED_COMPLETION COMPLETED MISSED CANCELLED }
 enum WorkerStatus { PENDING VERIFIED ACTIVE SUSPENDED INACTIVE }
+enum InspectionResult { PASS FAIL }
+enum ReworkStatus { OPEN ASSIGNED IN_PROGRESS COMPLETED CANCELLED }
+enum InvoiceStatus { DRAFT ISSUED SENT PARTIALLY_PAID PAID OVERDUE VOID CANCELLED }
+enum PaymentStatus { PENDING SUCCESS FAILED REFUNDED }
 
 model Organization {
-  id          String       @id @default(cuid())
-  name        String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  users       User[]
-  facilities  Facility[]
-  requests    ServiceRequest[]
-  contracts   Contract[]
-  invoices    Invoice[]
+  id String @id @default(cuid())
+  name String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users User[]
+  facilities Facility[]
+  requests ServiceRequest[]
+  contracts Contract[]
+  invoices Invoice[]
+  inspections Inspection[]
+  reworks Rework[]
+  payments Payment[]
 }
 
 model User {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
   organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  name           String
-  email          String       @unique
-  passwordHash   String
-  role           Role
-  active         Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  worker         Worker?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  name String
+  email String @unique
+  passwordHash String
+  role Role
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  worker Worker?
+  inspections Inspection[]
 }
 
 model Facility {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  name           String
-  type           FacilityType
-  address        String
-  areaSqFt       Int?
+  organization Organization @relation(fields: [organizationId], references: [id])
+  name String
+  type FacilityType
+  address String
+  areaSqFt Int?
   operatingHours String?
-  riskProfile    String?
-  createdAt      DateTime     @default(now())
-  requests       ServiceRequest[]
-  contracts      Contract[]
-  jobs           Job[]
+  riskProfile String?
+  createdAt DateTime @default(now())
+  requests ServiceRequest[]
+  contracts Contract[]
+  jobs Job[]
 }
 
 model ServiceRequest {
-  id             String        @id @default(cuid())
+  id String @id @default(cuid())
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  facilityId     String
-  facility       Facility      @relation(fields: [facilityId], references: [id])
-  serviceName    String
-  requirements   String?
-  preferredDate  DateTime?
-  status         RequestStatus  @default(NEW)
-  createdAt      DateTime      @default(now())
-  quotes         Quote[]
+  organization Organization @relation(fields: [organizationId], references: [id])
+  facilityId String
+  facility Facility @relation(fields: [facilityId], references: [id])
+  serviceName String
+  requirements String?
+  preferredDate DateTime?
+  status RequestStatus @default(NEW)
+  createdAt DateTime @default(now())
+  quotes Quote[]
 }
 
 model Quote {
-  id             String         @id @default(cuid())
-  requestId      String
-  request        ServiceRequest @relation(fields: [requestId], references: [id])
-  monthlyValue   Decimal        @db.Decimal(12,2)
-  setupFee       Decimal        @default(0) @db.Decimal(12,2)
-  staffingCount  Int
-  frequency      String
-  slaSummary     String?
-  validUntil     DateTime
-  approvedAt     DateTime?
-  createdAt      DateTime       @default(now())
+  id String @id @default(cuid())
+  requestId String
+  request ServiceRequest @relation(fields: [requestId], references: [id])
+  monthlyValue Decimal @db.Decimal(12,2)
+  setupFee Decimal @default(0) @db.Decimal(12,2)
+  staffingCount Int
+  frequency String
+  slaSummary String?
+  validUntil DateTime
+  approvedAt DateTime?
+  createdAt DateTime @default(now())
 }
 
 model Contract {
-  id             String         @id @default(cuid())
+  id String @id @default(cuid())
   organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id])
-  facilityId     String
-  facility       Facility       @relation(fields: [facilityId], references: [id])
-  name           String
-  status         ContractStatus @default(DRAFT)
-  monthlyValue   Decimal        @db.Decimal(12,2)
-  startDate      DateTime
-  endDate        DateTime?
-  createdAt      DateTime       @default(now())
-  jobs           Job[]
+  organization Organization @relation(fields: [organizationId], references: [id])
+  facilityId String
+  facility Facility @relation(fields: [facilityId], references: [id])
+  name String
+  status ContractStatus @default(DRAFT)
+  monthlyValue Decimal @db.Decimal(12,2)
+  startDate DateTime
+  endDate DateTime?
+  createdAt DateTime @default(now())
+  jobs Job[]
+  invoices Invoice[]
 }
 
 model Worker {
-  id             String       @id @default(cuid())
-  userId         String       @unique
-  user           User         @relation(fields: [userId], references: [id])
+  id String @id @default(cuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id])
   classification String
   specialization String?
-  status         WorkerStatus @default(PENDING)
-  rating         Decimal      @default(0) @db.Decimal(3,2)
-  jobsCompleted  Int          @default(0)
-  verifiedAt     DateTime?
-  jobs           Job[]
+  status WorkerStatus @default(PENDING)
+  rating Decimal @default(0) @db.Decimal(3,2)
+  jobsCompleted Int @default(0)
+  verifiedAt DateTime?
+  jobs Job[]
+  reworks Rework[]
 }
 
 model Job {
-  id             String      @id @default(cuid())
-  facilityId     String
-  facility       Facility    @relation(fields: [facilityId], references: [id])
-  contractId     String?
-  contract       Contract?   @relation(fields: [contractId], references: [id])
-  workerId       String?
-  worker         Worker?     @relation(fields: [workerId], references: [id])
+  id String @id @default(cuid())
+  facilityId String
+  facility Facility @relation(fields: [facilityId], references: [id])
+  contractId String?
+  contract Contract? @relation(fields: [contractId], references: [id])
+  workerId String?
+  worker Worker? @relation(fields: [workerId], references: [id])
   scheduledStart DateTime
-  scheduledEnd   DateTime
-  status         JobStatus   @default(SCHEDULED)
-  checklistData  Json?
-  checkInAt      DateTime?
-  checkOutAt     DateTime?
-  completedAt    DateTime?
-  createdAt      DateTime    @default(now())
+  scheduledEnd DateTime
+  status JobStatus @default(SCHEDULED)
+  checklistData Json?
+  checkInAt DateTime?
+  checkOutAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  inspections Inspection[]
+  reworks Rework[]
+}
+
+model Inspection {
+  id String @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id])
+  jobId String
+  job Job @relation(fields: [jobId], references: [id])
+  inspectorUserId String
+  inspector User @relation(fields: [inspectorUserId], references: [id])
+  result InspectionResult
+  score Decimal? @db.Decimal(5,2)
+  checklist Json?
+  notes String?
+  failureReasons Json?
+  createdAt DateTime @default(now())
+  reworks Rework[]
+  @@index([organizationId, jobId])
+}
+
+model Rework {
+  id String @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id])
+  jobId String
+  job Job @relation(fields: [jobId], references: [id])
+  inspectionId String
+  inspection Inspection @relation(fields: [inspectionId], references: [id])
+  assignedWorkerId String?
+  assignedWorker Worker? @relation(fields: [assignedWorkerId], references: [id])
+  reason String
+  correctiveAction String?
+  status ReworkStatus @default(OPEN)
+  dueAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([organizationId, jobId])
 }
 
 model Invoice {
-  id             String       @id @default(cuid())
+  id String @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  contractId     String?
-  amount         Decimal      @db.Decimal(12,2)
-  currency       String       @default("INR")
-  status         String       @default("ISSUED")
-  dueDate        DateTime
-  paidAt         DateTime?
-  createdAt      DateTime     @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id])
+  contractId String?
+  contract Contract? @relation(fields: [contractId], references: [id])
+  amount Decimal @db.Decimal(12,2)
+  currency String @default("INR")
+  status InvoiceStatus @default(ISSUED)
+  invoiceNumber String @unique
+  dueDate DateTime
+  paidAt DateTime?
+  createdAt DateTime @default(now())
+  payments Payment[]
+  @@index([organizationId, status])
+}
+
+model Payment {
+  id String @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id])
+  invoiceId String
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  amount Decimal @db.Decimal(12,2)
+  currency String @default("INR")
+  status PaymentStatus @default(PENDING)
+  method String?
+  reference String? @unique
+  paidAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([organizationId, invoiceId])
 }
 
 model AuditEvent {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
   organizationId String?
-  actorUserId    String?
-  action         String
-  entityType     String
-  entityId       String?
-  metadata       Json?
-  createdAt      DateTime @default(now())
+  actorUserId String?
+  action String
+  entityType String
+  entityId String?
+  metadata Json?
+  createdAt DateTime @default(now())
   @@index([organizationId, createdAt])
 }
