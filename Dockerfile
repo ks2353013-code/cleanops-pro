@@ -7,12 +7,13 @@ RUN npm install --no-audit --no-fund
 
 FROM node:22-alpine AS builder
 WORKDIR /app
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY . .
-RUN DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" npx prisma generate
+RUN npx prisma generate
 RUN npm run build
 
 FROM node:22-alpine AS runner
