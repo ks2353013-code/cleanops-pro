@@ -12,6 +12,7 @@ enum Role {
   SUPERVISOR
   CLIENT_MANAGER
   PROFESSIONAL
+  CUSTOMER
 }
 
 enum FacilityType {
@@ -111,18 +112,19 @@ model Organization {
 }
 
 model User {
-  id             String        @id @default(cuid())
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  name           String
-  email          String        @unique
-  phone          String?       @unique
-  passwordHash   String
-  role           Role
-  active         Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  worker         Worker?
-  inspections    Inspection[]
+  id                String            @id @default(cuid())
+  organizationId    String?
+  organization      Organization?     @relation(fields: [organizationId], references: [id])
+  name              String
+  email             String            @unique
+  phone             String?           @unique
+  passwordHash      String
+  role              Role
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  worker            Worker?
+  inspections       Inspection[]
+  customerRequests  ServiceRequest[]  @relation("CustomerRequests")
 }
 
 model Facility {
@@ -145,6 +147,8 @@ model ServiceRequest {
   id             String         @id @default(cuid())
   organizationId String
   organization   Organization   @relation(fields: [organizationId], references: [id])
+  customerId     String?
+  customer       User?          @relation("CustomerRequests", fields: [customerId], references: [id])
   facilityId     String
   facility       Facility       @relation(fields: [facilityId], references: [id])
   serviceName    String
@@ -153,6 +157,7 @@ model ServiceRequest {
   status         RequestStatus  @default(NEW)
   createdAt      DateTime       @default(now())
   quotes         Quote[]
+  @@index([customerId, createdAt])
 }
 
 model Quote {
@@ -172,9 +177,9 @@ model Quote {
 model Contract {
   id             String         @id @default(cuid())
   organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id])
+  organization   Organization  @relation(fields: [organizationId], references: [id])
   facilityId     String
-  facility       Facility       @relation(fields: [facilityId], references: [id])
+  facility       Facility      @relation(fields: [facilityId], references: [id])
   name           String
   status         ContractStatus @default(DRAFT)
   monthlyValue   Decimal        @db.Decimal(12, 2)
@@ -234,7 +239,6 @@ model Inspection {
   failureReasons  Json?
   createdAt       DateTime         @default(now())
   reworks         Rework[]
-  @@index([organizationId, jobId])
 }
 
 model Rework {
