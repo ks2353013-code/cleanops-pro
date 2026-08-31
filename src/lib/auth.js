@@ -12,7 +12,7 @@ export function verifyPassword(password,stored){try{const [s,e]=String(stored).s
 export function signSession(payload){const body=b64(Buffer.from(JSON.stringify({...payload,iat:Date.now(),exp:Date.now()+1000*60*60*12})));const sig=crypto.createHmac('sha256',secret()).update(body).digest('base64url');return `${body}.${sig}`;}
 export function verifySession(token){try{const [body,sig]=String(token).split('.');if(!body||!sig)return null;const expected=crypto.createHmac('sha256',secret()).update(body).digest('base64url');if(!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected)))return null;const data=JSON.parse(unb64(body));return data.exp>Date.now()?data:null;}catch{return null;}}
 export async function createSession(payload){const store=await cookies();store.set(COOKIE,signSession(payload),{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:60*60*12});}
-export async function getSession(){const store=await cookies();const raw=store.get(COOKIE)?.value;const s=verifySession(raw);if(!s?.userId)return null;return db.user.findUnique({where:{id:s.userId},select:{id:true,name:true,email:true,role:true,organizationId:true,active:true}}).then(u=>u?.active?u:null);}
+export async function getSession(){const store=await cookies();const raw=store.get(COOKIE)?.value;const s=verifySession(raw);if(!s?.userId)return null;return db.user.findUnique({where:{id:s.userId},select:{id:true,name:true,email:true,phone:true,role:true,organizationId:true,active:true}}).then(u=>u?.active?u:null);}
 export async function requireUser(){const u=await getSession();if(!u)throw new Error('UNAUTHENTICATED');return u;}
 export async function destroySession(){const store=await cookies();store.delete(COOKIE);}
 export {COOKIE};
