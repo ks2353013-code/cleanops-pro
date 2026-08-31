@@ -1,0 +1,3 @@
+const inspections=[];
+export async function GET(){return Response.json({data:inspections});}
+export async function POST(req){const b=await req.json(); if(!b.jobId||!b.inspectorId||typeof b.score!=='number') return Response.json({error:'jobId, inspectorId and numeric score are required'},{status:400}); const i={id:`INS-${Date.now().toString().slice(-6)}`,jobId:b.jobId,inspectorId:b.inspectorId,score:Math.max(0,Math.min(100,b.score)),notes:String(b.notes||''),status:b.score>=80?'passed':'follow_up_required',createdAt:new Date().toISOString()}; inspections.unshift(i); return Response.json({data:i},{status:201});}

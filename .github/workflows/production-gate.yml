@@ -1,0 +1,33 @@
+name: Production Gate
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npm run db:generate
+      - run: npm run db:deploy
+      - run: npm test
+      - run: npm run build
+      - name: Start application
+        run: npm start > /tmp/cleanops.log 2>&1 &
+      - name: Wait for application
+        run: npx --yes wait-on http://localhost:3000/api/health
+      - name: Local health smoke test
+        run: BASE_URL=http://localhost:3000 npm run smoke
+      - name: Staging health smoke test
+        if: ${{ env.BASE_URL != '' }}
+        run: npm run smoke

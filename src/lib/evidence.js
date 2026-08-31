@@ -1,0 +1,2 @@
+export function validateEvidence({jobId,workerId,items=[]}){if(!jobId||!workerId)throw new Error('jobId and workerId are required');return items.map((x,i)=>({id:x.id||`EV-${Date.now()}-${i}`,jobId,workerId,type:x.type||'photo',url:String(x.url||''),caption:String(x.caption||''),capturedAt:x.capturedAt||new Date().toISOString()}));}
+export function evidenceStatus(evidence,required=1){const valid=evidence.filter(x=>x.url);return {required,provided:valid.length,complete:valid.length>=required};}

@@ -1,0 +1,4 @@
+import { db } from '../../../../src/lib/db';
+import { verifyPassword, createSession } from '../../../../src/lib/auth';
+const TEAM_ROLES=['PLATFORM_ADMIN','OPERATIONS_MANAGER','SUPERVISOR','PROFESSIONAL'];
+export async function POST(req){try{const {email,password}=await req.json();if(!email||!password)return Response.json({error:'email and password are required'},{status:400});const user=await db.user.findUnique({where:{email:String(email).trim().toLowerCase()}});if(!user||!user.active||!TEAM_ROLES.includes(user.role)||!(await verifyPassword(password,user.passwordHash)))return Response.json({error:'Invalid team credentials'},{status:401});await createSession({userId:user.id,organizationId:user.organizationId,role:user.role});return Response.json({data:{id:user.id,name:user.name,email:user.email,role:user.role,organizationId:user.organizationId}});}catch(e){console.error(e);return Response.json({error:'Unable to sign in'},{status:500});}}

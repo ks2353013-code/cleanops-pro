@@ -1,0 +1,2 @@
+import { evaluateService, correctiveAction } from '../../../../src/lib/quality';
+export async function POST(req){try{const b=await req.json();if(!Array.isArray(b.checklist))return Response.json({error:'checklist is required'},{status:400});const evaluation=evaluateService(b);const action=correctiveAction({score:evaluation.score,complaintSeverity:b.complaintSeverity,slaBreached:!evaluation.slaMet});return Response.json({data:{evaluation,correctiveAction:action}});}catch{return Response.json({error:'Unable to evaluate service'},{status:400});}}
