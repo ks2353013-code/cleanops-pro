@@ -9,7 +9,15 @@ export async function GET() {
 
     const worker = await prisma.worker.findFirst({
       where: { userId: user.id, user: { organizationId: user.organizationId } },
-      select: { id: true, classification: true, specialization: true, status: true },
+      select: {
+        id: true,
+        classification: true,
+        specialization: true,
+        status: true,
+        rating: true,
+        jobsCompleted: true,
+        user: { select: { name: true, email: true, phone: true } },
+      },
     });
     if (!worker) return Response.json({ error: 'Professional profile not found' }, { status: 404 });
     if (!['ACTIVE', 'VERIFIED'].includes(worker.status)) {
@@ -22,7 +30,7 @@ export async function GET() {
       orderBy: { scheduledStart: 'asc' },
       take: 100,
     });
-    return Response.json({ data: jobs, worker });
+    return Response.json({ data: jobs, worker: { ...worker, name: worker.user.name } });
   } catch (e) {
     const status = e.message === 'UNAUTHENTICATED' ? 401 : 500;
     return Response.json({ error: status === 401 ? 'Authentication required' : 'Unable to load professional jobs' }, { status });
