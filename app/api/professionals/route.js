@@ -1,8 +1,12 @@
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 
-const prisma = globalThis.__cleanopsPrisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalThis.__cleanopsPrisma = prisma;
+const globalForPrisma = globalThis;
+const prisma = globalForPrisma.__cleanopsPrisma || new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
+});
+if (process.env.NODE_ENV !== 'production') globalForPrisma.__cleanopsPrisma = prisma;
 
 const ALLOWED_STATUSES = ['PENDING','VERIFIED','ACTIVE','SUSPENDED','INACTIVE'];
 
