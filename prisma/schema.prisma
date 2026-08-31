@@ -116,6 +116,7 @@ model User {
   organization   Organization? @relation(fields: [organizationId], references: [id])
   name           String
   email          String        @unique
+  phone          String?       @unique
   passwordHash   String
   role           Role
   active         Boolean       @default(true)
@@ -233,7 +234,6 @@ model Inspection {
   failureReasons  Json?
   createdAt       DateTime         @default(now())
   reworks         Rework[]
-
   @@index([organizationId, jobId])
 }
 
@@ -253,7 +253,6 @@ model Rework {
   dueAt            DateTime?
   completedAt      DateTime?
   createdAt        DateTime     @default(now())
-
   @@index([organizationId, jobId])
 }
 
@@ -271,7 +270,6 @@ model Invoice {
   paidAt         DateTime?
   createdAt      DateTime      @default(now())
   payments       Payment[]
-
   @@index([organizationId, status])
 }
 
@@ -288,7 +286,6 @@ model Payment {
   reference      String?       @unique
   paidAt         DateTime?
   createdAt      DateTime      @default(now())
-
   @@index([organizationId, invoiceId])
 }
 
@@ -301,6 +298,5 @@ model AuditEvent {
   entityId       String?
   metadata       Json?
   createdAt      DateTime @default(now())
-
   @@index([organizationId, createdAt])
 }
