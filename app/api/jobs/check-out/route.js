@@ -1,1 +1,18 @@
-export async function POST(req){const b=await req.json(); if(!b.jobId||!b.workerId) return Response.json({error:'jobId and workerId are required'},{status:400}); return Response.json({data:{jobId:b.jobId,workerId:b.workerId,checkedOutAt:new Date().toISOString(),status:'checked_out'}});}
+import { prisma } from '../../../../lib/prisma';
+import { requireUser } from '../../../../src/lib/auth';
+
+export async function POST(req){
+  try{
+    const user=await requireUser();
+    if(user.role!=='PROFESSIONAL') return Response.json({error:'Forbidden'},{status:403});
+    const {jobId}=await req.json();
+    if(!jobId) return Response.json({error:'jobId is required'},{status:400});
+    const worker=await prisma.worker.findFirst({where:{userId:user.id,status:{in:['ACTIVE','VERIFIED']}}});
+    if(!worker) return Response.json({error:'Professional profile not found'},{status:404});
+    const job=await prisma.job.findFirst({where:{id:jobId,workerId:worker.id,facility:{organizationId:user.organizationId}}});
+    if(!job) return Response.json({error:'Assigned job not found'},{status:404});
+    if(!['CHECKED_IN','IN_PROGRESS'].includes(job.status)) return Response.json({error:'Job is not in progress'},{status:409});
+    const updated=await prisma.job.update({where:{id:job.id},data:{status:'INSPECTION',checkOutAt:new Date(),completedAt:new Date()}});
+    return Response.json({data:{id:updated.id,status:updated.status,checkOutAt:updated.checkOutAt}});
+  }catch(e){return Response.json({error:e.message==='UNAUTHENTICATED'?'Authentication required':'Unable to check out'},{status:e.message==='UNAUTHENTICATED'?401:500});}
+}
