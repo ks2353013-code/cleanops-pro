@@ -1,329 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 
 const PERSONAL = [
-  { id: 'home', icon: '🏠', name: 'Home cleaning', desc: 'Everyday cleaning', price: 55, unit: '/hr' },
-  { id: 'bathroom', icon: '🚿', name: 'Bathroom', desc: 'Deep hygiene clean', price: 149, unit: ' onwards' },
-  { id: 'kitchen', icon: '🍳', name: 'Kitchen', desc: 'Kitchen & surfaces', price: 149, unit: ' onwards' },
-  { id: 'deep', icon: '✨', name: 'Deep cleaning', desc: 'Top-to-bottom clean', price: 799, unit: ' onwards' },
-  { id: 'sofa', icon: '🛋️', name: 'Sofa & carpet', desc: 'Fabric care', price: 399, unit: ' onwards' },
-  { id: 'glass', icon: '🪟', name: 'Windows', desc: 'Glass & frames', price: 199, unit: ' onwards' },
+  { id: 'home', name: 'Home Cleaning', price: 55, unit: '/hr', desc: 'Everyday home cleaning', image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=700&q=80' },
+  { id: 'bathroom', name: 'Bathroom Cleaning', price: 75, unit: '/hr', desc: 'Hygiene deep clean', image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=700&q=80' },
+  { id: 'kitchen', name: 'Kitchen Cleaning', price: 75, unit: '/hr', desc: 'Kitchen & surfaces', image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=700&q=80' },
+  { id: 'deep', name: 'Deep Cleaning', price: 120, unit: '/hr', desc: 'Top-to-bottom cleaning', image: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=700&q=80' },
+  { id: 'sofa', name: 'Sofa & Carpet', price: 120, unit: '/hr', desc: 'Fabric & floor care', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=700&q=80' },
+  { id: 'windows', name: 'Windows Cleaning', price: 60, unit: '/hr', desc: 'Glass & frames', image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=700&q=80' },
 ];
+const BUSINESS = [['OFFICE','Office','Workspaces','🏢'],['HOSPITAL','Hospital','Healthcare','🏥'],['SCHOOL','School','Educational','🏫'],['HOTEL','Hotel','Hospitality','🏨'],['FACTORY','Factory','Industrial','🏭'],['WAREHOUSE','Warehouse','Logistics','📦'],['CORPORATE','Corporate','Enterprises','🏙️'],['RETAIL','Retail','Stores & Malls','🛍️']];
+const HOURS=[1,2,3,4,6,8];
+const FREQ=[['WEEKLY','Weekly',4.33],['TWICE','2× / week',8.67],['THREE','3× / week',13],['WEEKDAYS','5 days / week',22],['DAILY','Daily',26]];
+const RULES={OFFICE:[3500,75,420],CORPORATE:[3500,75,480],HOSPITAL:[3500,50,650],SCHOOL:[7000,250,380],HOTEL:[5000,40,520],FACTORY:[6000,0,500],WAREHOUSE:[8000,0,420],RETAIL:[4000,100,450]};
+function teamFor(type,area,people){const [sq,pp]=RULES[type]||RULES.OFFICE;return Math.max(1,Math.ceil((Number(area)||0)/sq)+(pp?Math.ceil((Number(people)||0)/pp):0));}
 
-const COMMERCIAL = [
-  ['OFFICE', '🏢', 'Office'],
-  ['CORPORATE', '🏙️', 'Corporate'],
-  ['HOSPITAL', '🏥', 'Hospital'],
-  ['SCHOOL', '🏫', 'School'],
-  ['HOTEL', '🏨', 'Hotel'],
-  ['FACTORY', '🏭', 'Factory'],
-  ['WAREHOUSE', '📦', 'Warehouse'],
-  ['RETAIL', '🛍️', 'Retail'],
-];
-
-const HOURS = [1, 2, 3, 4, 6, 8];
-const FREQ = [
-  ['ONCE', 'One time', 1],
-  ['WEEKLY', 'Weekly', 4.33],
-  ['TWICE', '2× / week', 8.67],
-  ['THREE', '3× / week', 13],
-  ['WEEKDAYS', '5 days / week', 22],
-  ['DAILY', 'Daily', 26],
-];
-
-const RULES = {
-  OFFICE: [3500, 75, 420],
-  CORPORATE: [3500, 75, 480],
-  HOSPITAL: [3500, 50, 650],
-  SCHOOL: [7000, 250, 380],
-  HOTEL: [5000, 40, 520],
-  FACTORY: [6000, 0, 500],
-  WAREHOUSE: [8000, 0, 420],
-  RETAIL: [4000, 100, 450],
-};
-
-function teamFor(type, area, people) {
-  const [sq, pp] = RULES[type] || RULES.OFFICE;
-  const areaTeam = Math.ceil((Number(area) || 0) / sq);
-  const peopleTeam = pp ? Math.ceil((Number(people) || 0) / pp) : 0;
-  return Math.max(1, areaTeam + peopleTeam);
+export default function Client(){
+ const [screen,setScreen]=useState('home'); const [mode,setMode]=useState('personal'); const [service,setService]=useState('home'); const [hours,setHours]=useState(3);
+ const [sector,setSector]=useState('OFFICE'); const [area,setArea]=useState(5000); const [people,setPeople]=useState(80); const [workHours,setWorkHours]=useState(8); const [frequency,setFrequency]=useState('WEEKDAYS'); const [date,setDate]=useState(''); const [time,setTime]=useState(''); const [message,setMessage]=useState('');
+ const selected=PERSONAL.find(x=>x.id===service)||PERSONAL[0]; const team=useMemo(()=>teamFor(sector,area,people),[sector,area,people]); const visits=FREQ.find(x=>x[0]===frequency)?.[2]||22; const rate=RULES[sector]?.[2]||420; const perVisit=Math.round(rate*team*Math.max(1,workHours/8)); const monthly=Math.round(perVisit*visits); const personalTotal=hours*selected.price;
+ async function book(){setMessage('');try{const commercial=mode==='business';const r=await fetch('/api/client/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({facilityName:commercial?`${sector} facility`:'Home',facilityType:commercial?sector:'RESIDENTIAL',areaSqFt:commercial?area:undefined,serviceName:commercial?`${sector} Cleaning`:`${selected.name} · ${hours} hour${hours>1?'s':''}`,requirements:commercial?`${team} professionals · ${frequency} · ${workHours} hours/day · ${people} people served`:`${hours} hour personal cleaning`,preferredDate:date?new Date(`${date}T${time||'09:00'}`).toISOString():new Date().toISOString()})});const x=await r.json();setMessage(r.ok?'Booking request received. We will confirm your slot shortly.':r.status===401?'Sign in with your mobile number to continue.':x.error||'Unable to create booking.')}catch{setMessage('Unable to connect. Please try again.')}}
+ const Header=({back='home',title=''})=><header className="co-header">{screen!=='home'&&<button className="co-back" onClick={()=>setScreen(back)}>‹</button>}<Link href="/" className="co-logo"><span>Clean</span>Ops</Link>{title&&<b className="co-title">{title}</b>}<div className="co-right"><button className="co-loc">⌖ Bengaluru, Karnataka⌄</button><Link href="/customer-login" className="co-avatar">●</Link></div></header>;
+ if(screen==='service')return <Shell><Header back="home"/><div className="co-cover"><img src={selected.image} alt=""/><button>↗</button><button>♡</button></div><div className="co-content"><div className="co-service-title"><div><h1>{selected.name}</h1><p>⭐ 4.8 (2.3K+) &nbsp; | &nbsp; CleanOps Professionals</p></div><span>Bestseller</span></div><p className="co-start">Starting at <b>₹{selected.price}{selected.unit}</b></p><p className="co-small">1 Professional</p><hr/><div className="co-line"><h3>How many hours?</h3><span>1 Professional</span></div><div className="co-hours">{HOURS.map(h=><button key={h} className={hours===h?'chosen':''} onClick={()=>setHours(h)}>{h} hr<small>₹{h*selected.price}</small></button>)}</div><div className="co-selected"><div><small>You selected</small><strong>₹{personalTotal}</strong><span>{hours} hours · 1 Professional</span></div><span>🧹</span></div><h3>What's included</h3><ul className="co-list"><li>Dusting of accessible surfaces</li><li>Sweeping & mopping floors</li><li>Kitchen exterior cleaning</li><li>Bathroom cleaning</li></ul><button className="co-primary" onClick={()=>setScreen('book')}>Continue to book <b>→</b></button></div></Shell>;
+ if(screen==='book')return <Shell><Header back="service" title="Book Home Cleaning"/><div className="co-book"><div className="co-summary"><img src={selected.image} alt=""/><div><b>{selected.name}</b><span>{hours} hours · 1 Professional</span></div><strong>₹{personalTotal}</strong></div><h3>Choose Date</h3><input type="date" value={date} onChange={e=>setDate(e.target.value)}/><h3>Choose Time</h3><div className="co-time">{['08:00 AM - 11:00 AM','11:00 AM - 02:00 PM','02:00 PM - 05:00 PM','05:00 PM - 08:00 PM'].map(x=><button key={x} className={time===x?'chosen':''} onClick={()=>setTime(x)}>{x}</button>)}</div><h3>Your Address</h3><div className="co-address"><b>Home</b><button>Change</button><span>#123, 4th Cross, Koramangala 5th Block,<br/>Bengaluru, Karnataka 560095</span></div><h3>Add a note <small>(optional)</small></h3><textarea placeholder="E.g. Please focus on kitchen and bathrooms"/><div className="co-total"><span>Total Amount</span><strong>₹{personalTotal}</strong></div><button className="co-primary" onClick={book}>Book Cleaning <b>→</b></button>{message&&<div className="co-message">{message}</div>}<p className="co-secure">◉ Secure booking · Easy payments</p></div></Shell>;
+ if(screen==='business')return <Shell><Header back="home"/><div className="co-page-title"><h1>Business Cleaning</h1><p>Choose your facility type</p></div><div className="co-business-grid">{BUSINESS.map(([id,name,desc,icon])=><button key={id} onClick={()=>{setSector(id);setScreen('businessForm')}}><span>{icon}</span><b>{name}</b><small>{desc}</small></button>)}</div><div className="co-help">◉<div><b>Need help choosing?</b><span>Our experts will guide you</span></div><strong>›</strong></div></Shell>;
+ if(screen==='businessForm')return <Shell><Header back="business"/><div className="co-page-title"><h1>{BUSINESS.find(x=>x[0]===sector)?.[1]} Cleaning</h1><p>Tell us about your workplace</p></div><div className="co-form"><label>Total Area<input type="number" value={area} onChange={e=>setArea(Number(e.target.value))}/><span>sq ft</span></label><label>Employees / People<input type="number" value={people} onChange={e=>setPeople(Number(e.target.value))}/><span>People</span></label><label>Cleaning Frequency<select value={frequency} onChange={e=>setFrequency(e.target.value)}>{FREQ.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label><label>Hours Per Day<select value={workHours} onChange={e=>setWorkHours(Number(e.target.value))}>{[4,6,8,10,12].map(x=><option key={x}>{x} hours</option>)}</select></label></div><div className="co-recommend"><small>Recommended for you</small><strong>{team} Professionals</strong><div className="co-faces">{Array.from({length:Math.min(team,3)}).map((_,i)=><span key={i}>👤</span>)}</div><hr/><small>Estimated Price</small><strong>₹{monthly.toLocaleString('en-IN')} / month</strong><b>₹{perVisit.toLocaleString('en-IN')} per visit</b></div><button className="co-primary co-margin" onClick={()=>setScreen('businessPlan')}>See what's included <b>→</b></button></Shell>;
+ if(screen==='businessPlan')return <Shell><Header back="businessForm"/><div className="co-page-title"><h1>Your {BUSINESS.find(x=>x[0]===sector)?.[1]} Cleaning Plan</h1><p>{area.toLocaleString('en-IN')} sq ft · {people} People · {frequency==='WEEKDAYS'?'Daily':frequency} · {workHours} hours/day</p></div><section className="co-plan-section"><h3>Your CleanOps Team</h3><div className="co-worker-list"><b>{team} Professionals</b>{Array.from({length:team}).map((_,i)=><div key={i}>◉<span><b>Professional {i+1}</b><small>{i===0?'General workplace cleaning':i===1?'Washrooms, pantry & hygiene areas':'Cleaning & support'}</small></span></div>)}<div>◉<span><b>Supervisor Visits</b><small>Quality checks & reporting</small></span></div></div><h3>What's Included</h3><ul className="co-list"><li>Daily cleaning of work areas</li><li>Washrooms & pantry hygiene</li><li>Dusting, sweeping & mopping</li><li>Garbage collection & disposal</li><li>Supervisor visits & quality checks</li></ul><div className="co-total"><span>Total Price</span><strong>₹{monthly.toLocaleString('en-IN')} <small>/ month</small></strong><em>₹{perVisit.toLocaleString('en-IN')} per visit</em></div><button className="co-primary" onClick={()=>{setMode('business');setScreen('book')}}>Continue to Schedule Assessment <b>→</b></button></section></Shell>;
+ return <Shell><Header/><div className="co-search">⌕ <span>Search for services...</span></div><section className="co-hero"><div><p className="co-kicker">CLEANING ON YOUR FINGERTIPS</p><h1>Clean home.<br/><i>Clear mind.</i></h1><p>Trusted CleanOps professionals at your doorstep.</p></div><img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=80" alt="Cleaning professional"/></section><div className="co-toggle"><button className={mode==='personal'?'active':''} onClick={()=>{setMode('personal');setScreen('home')}}>Personal</button><button className={mode==='business'?'active':''} onClick={()=>{setMode('business');setScreen('business')}}>Business</button></div><section className="co-section"><div className="co-section-head"><div><h2>Popular Services</h2><p>Book in a few taps with upfront pricing.</p></div><button>See all</button></div><div className="co-service-grid">{PERSONAL.map(item=><button className="co-service" key={item.id} onClick={()=>{setService(item.id);setScreen('service')}}><img src={item.image} alt=""/><div><strong>{item.name}</strong><small>{item.desc}</small><span>Starting ₹{item.price}{item.unit}</span></div></button>)}</div></section><section className="co-plan"><div><b>Regular cleaning?</b><strong>Save up to 20% with Recurring Plans</strong><button onClick={()=>{setService('home');setScreen('service')}}>Explore Plans</button></div><span>🧴</span></section><nav className="co-bottom"><button className="active">⌂<small>Home</small></button><button>▣<small>Bookings</small></button><button>▤<small>Wallet</small></button><Link href="/customer-login">●<small>Profile</small></Link></nav></Shell>;
 }
-
-export default function Client() {
-  const [mode, setMode] = useState('personal');
-  const [service, setService] = useState('home');
-  const [hours, setHours] = useState(2);
-  const [sector, setSector] = useState('OFFICE');
-  const [area, setArea] = useState(5000);
-  const [people, setPeople] = useState(50);
-  const [workHours, setWorkHours] = useState(8);
-  const [freq, setFreq] = useState('WEEKDAYS');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [message, setMessage] = useState('');
-
-  const selected = PERSONAL.find((x) => x.id === service) || PERSONAL[0];
-  const personalPrice = service === 'home' ? hours * 55 : selected.price;
-  const team = teamFor(sector, area, people);
-  const visits = FREQ.find((x) => x[0] === freq)?.[2] || 22;
-  const rate = RULES[sector]?.[2] || 420;
-  const perVisit = Math.round(rate * team * Math.max(1, workHours / 8));
-  const monthly = Math.round(perVisit * visits);
-
-  async function book() {
-    setMessage('');
-    try {
-      const commercial = mode === 'commercial';
-      const response = await fetch('/api/client/request', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          facilityName: commercial ? `${sector} facility` : 'Home',
-          facilityType: commercial ? sector : 'RESIDENTIAL',
-          areaSqFt: commercial ? area : undefined,
-          serviceName: commercial
-            ? `${sector} Cleaning`
-            : `${selected.name} · ${hours} hour${hours > 1 ? 's' : ''}`,
-          requirements: commercial
-            ? `${team} professionals · ${freq} · ${workHours} hours/day · ${people} people served`
-            : `${hours} hour personal cleaning`,
-          preferredDate: date
-            ? new Date(`${date}T${time || '09:00'}`).toISOString()
-            : new Date().toISOString(),
-        }),
-      });
-      const data = await response.json();
-      setMessage(
-        response.ok
-          ? 'Booking request received. We will confirm your slot shortly.'
-          : response.status === 401
-            ? 'Sign in with your mobile number to continue.'
-            : data.error || 'Unable to create booking.'
-      );
-    } catch {
-      setMessage('Unable to connect. Please try again.');
-    }
-  }
-
-  return (
-    <main style={s.page}>
-      <header style={s.header}>
-        <Link href="/" style={s.logo}>CleanOps</Link>
-        <button type="button" style={s.loc}>⌖ <b>Home</b>⌄</button>
-        <Link href="/customer-login" style={s.avatar}>●</Link>
-      </header>
-
-      <div style={s.search}>⌕ <span>Search cleaning services</span></div>
-
-      <section style={s.hero}>
-        <div>
-          <span style={s.eyebrow}>CLEANING ON YOUR FINGERTIPS</span>
-          <h1 style={s.h1}>Clean home.<br /><i>Clear mind.</i></h1>
-          <p style={s.heroText}>Book a CleanOps professional without the complicated process.</p>
-          <button type="button" onClick={() => setMode('personal')} style={s.primary}>Book a cleaning →</button>
-        </div>
-        <div style={s.heroArt}>
-          <div style={s.heroSpark}>✨</div>
-          <b>Trusted cleaning<br />at your doorstep</b>
-        </div>
-      </section>
-
-      <div style={s.wrap}>
-        <div style={s.switch}>
-          <button type="button" onClick={() => setMode('personal')} style={mode === 'personal' ? s.switchOn : s.switchOff}>🏠 Personal</button>
-          <button type="button" onClick={() => setMode('commercial')} style={mode === 'commercial' ? s.switchOn : s.switchOff}>🏢 Business</button>
-        </div>
-
-        {mode === 'personal' ? (
-          <>
-            <section>
-              <div style={s.head}>
-                <h2 style={s.h2}>What do you need?</h2>
-                <p style={s.muted}>Choose a service. See the price before you book.</p>
-              </div>
-              <div style={s.grid}>
-                {PERSONAL.map((item) => (
-                  <button key={item.id} type="button" onClick={() => setService(item.id)} style={service === item.id ? s.cardActive : s.card}>
-                    <div style={s.cardIcon}>{item.icon}</div>
-                    <div style={s.cardBody}>
-                      <b>{item.name}</b>
-                      <small>{item.desc}</small>
-                      <strong>₹{item.price}<em>{item.unit}</em></strong>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section style={s.panel}>
-              <div style={s.row}>
-                <div>
-                  <span style={s.eyebrow}>YOUR SERVICE</span>
-                  <h3 style={s.h3}>{selected.name}</h3>
-                  <p style={s.muted}>{selected.desc} · <b>{service === 'home' ? '1 professional' : 'professional service'}</b></p>
-                </div>
-                <strong style={s.price}>₹{personalPrice}<small>{service === 'home' ? 'total' : 'starting'}</small></strong>
-              </div>
-
-              {service === 'home' && (
-                <>
-                  <h4 style={s.h4}>How many hours?</h4>
-                  <div style={s.hours}>
-                    {HOURS.map((value) => (
-                      <button key={value} type="button" onClick={() => setHours(value)} style={hours === value ? s.hourActive : s.hour}>
-                        {value}<small>hr · ₹{value * 55}</small>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <div style={s.chips}>
-                <b>Includes</b><span>✓ Sweeping</span><span>✓ Mopping</span><span>✓ Dusting</span><span>✓ Kitchen & bathroom</span>
-              </div>
-            </section>
-          </>
-        ) : (
-          <>
-            <section>
-              <div style={s.head}>
-                <h2 style={s.h2}>What are you cleaning?</h2>
-                <p style={s.muted}>Get a transparent team and monthly estimate.</p>
-              </div>
-              <div style={s.bizGrid}>
-                {COMMERCIAL.map(([id, icon, name]) => (
-                  <button key={id} type="button" onClick={() => setSector(id)} style={sector === id ? s.bizActive : s.biz}>
-                    <span style={s.bizIcon}>{icon}</span><b>{name}</b><small>Cleaning</small>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section style={s.panel}>
-              <div style={s.inputs}>
-                <label style={s.label}>Area
-                  <input style={s.input} type="number" min="1" value={area} onChange={(e) => setArea(Number(e.target.value))} />
-                  <small>sq ft</small>
-                </label>
-                <label style={s.label}>People served
-                  <input style={s.input} type="number" min="1" value={people} onChange={(e) => setPeople(Number(e.target.value))} />
-                </label>
-                <label style={s.label}>Hours/day
-                  <input style={s.input} type="number" min="2" max="16" value={workHours} onChange={(e) => setWorkHours(Number(e.target.value))} />
-                </label>
-              </div>
-              <h4 style={s.h4}>How often?</h4>
-              <div style={s.freq}>
-                {FREQ.map(([id, name]) => (
-                  <button key={id} type="button" onClick={() => setFreq(id)} style={freq === id ? s.freqActive : s.freqBtn}>{name}</button>
-                ))}
-              </div>
-            </section>
-
-            <section style={s.quote}>
-              <div><span>YOUR CLEANOPS TEAM</span><strong>{team} professionals</strong><small>Based on facility size and people served.</small></div>
-              <div><span>ESTIMATED PRICE</span><strong>₹{monthly.toLocaleString('en-IN')}<small>/month</small></strong><small>₹{perVisit.toLocaleString('en-IN')} per visit · {visits} visits</small></div>
-            </section>
-
-            <section style={s.chips}>
-              <b>Included</b><span>✓ Assigned cleaning workforce</span><span>✓ Agreed service scope</span><span>✓ Routine quality checks</span><span>✓ Specialist work quoted separately</span>
-            </section>
-          </>
-        )}
-
-        <section style={s.panel}>
-          <h3 style={s.h3}>Choose your time</h3>
-          <div style={s.inputs}>
-            <label style={s.label}>Date<input style={s.input} type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-            <label style={s.label}>Time<select style={s.input} value={time} onChange={(e) => setTime(e.target.value)}><option value="">Select time</option><option>08:00</option><option>10:00</option><option>12:00</option><option>14:00</option><option>16:00</option><option>18:00</option></select></label>
-          </div>
-        </section>
-
-        <button type="button" onClick={book} style={s.book}>
-          {mode === 'commercial' ? `Continue · ₹${monthly.toLocaleString('en-IN')}/month` : `Continue · ₹${personalPrice.toLocaleString('en-IN')}`} <b>→</b>
-        </button>
-
-        {message && <div style={s.message}>{message}{message.includes('Sign in') && <> <Link href="/customer-login">Sign in →</Link></>}</div>}
-        <div style={s.trust}><span>✓ Verified professionals</span><span>✓ Upfront pricing</span><span>✓ Quality checked</span></div>
-      </div>
-
-      <nav style={s.nav}>
-        <Link href="/client" style={s.navOn}>⌂<small>Home</small></Link>
-        <Link href="/client" style={s.navItem}>▣<small>Bookings</small></Link>
-        <Link href="/customer-login" style={s.navItem}>●<small>Account</small></Link>
-      </nav>
-    </main>
-  );
-}
-
-const s = {
-  page: { minHeight: '100vh', background: '#f7f8f6', color: '#18201d', fontFamily: 'Inter,system-ui,sans-serif', paddingBottom: 90 },
-  header: { height: 64, padding: '0 18px', display: 'flex', alignItems: 'center', gap: 16, background: '#fff', borderBottom: '1px solid #e7ece9', position: 'sticky', top: 0, zIndex: 10 },
-  logo: { fontSize: 24, fontWeight: 950, color: '#111', textDecoration: 'none', letterSpacing: -1 },
-  loc: { marginLeft: 'auto', border: 0, background: 'transparent', fontSize: 12, color: '#66716c' },
-  avatar: { width: 34, height: 34, borderRadius: '50%', background: '#edf2ef', display: 'grid', placeItems: 'center', color: '#145d50', textDecoration: 'none' },
-  search: { maxWidth: 1080, height: 44, margin: '14px auto', padding: '0 14px', display: 'flex', alignItems: 'center', gap: 9, background: '#fff', border: '1px solid #e0e7e3', borderRadius: 11, color: '#87918d', fontSize: 13 },
-  hero: { maxWidth: 1080, margin: '0 auto 18px', padding: '0 18px', display: 'grid', gridTemplateColumns: '1.25fr .75fr', gap: 10 },
-  heroArt: { minHeight: 220, borderRadius: 18, background: 'linear-gradient(145deg,#dcebe4,#b7cec5)', padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'end', fontSize: 18 },
-  heroSpark: { fontSize: 44, marginBottom: 'auto' },
-  heroText: { maxWidth: 520, color: '#66716c' },
-  wrap: { maxWidth: 1080, margin: 'auto', padding: '0 18px' },
-  eyebrow: { fontSize: 10, fontWeight: 950, letterSpacing: 1.3, color: '#0b705f' },
-  primary: { marginTop: 10, border: 0, borderRadius: 9, padding: '11px 16px', background: '#0b6759', color: '#fff', fontWeight: 900 },
-  h1: { fontSize: 'clamp(38px,5vw,56px)', lineHeight: 0.98, letterSpacing: -3, margin: '7px 0' },
-  h2: { margin: 0, fontSize: 22, letterSpacing: -0.5 },
-  h3: { margin: 0, fontSize: 18 },
-  h4: { margin: '18px 0 8px', fontSize: 13 },
-  switch: { display: 'flex', gap: 4, background: '#e9eeeb', padding: 4, borderRadius: 10, width: 'fit-content', marginBottom: 24 },
-  switchOff: { border: 0, background: 'transparent', padding: '9px 16px', borderRadius: 8, fontWeight: 900, color: '#68736f' },
-  switchOn: { border: 0, background: '#111', color: '#fff', padding: '9px 16px', borderRadius: 8, fontWeight: 900 },
-  head: { marginBottom: 12 },
-  muted: { color: '#74807b', fontSize: 12, margin: '5px 0 0' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 },
-  card: { border: '1px solid #e0e7e3', background: '#fff', borderRadius: 13, padding: 0, textAlign: 'left', overflow: 'hidden', cursor: 'pointer' },
-  cardActive: { border: '2px solid #0b6759', background: '#fff', borderRadius: 13, padding: 0, textAlign: 'left', overflow: 'hidden', cursor: 'pointer' },
-  cardIcon: { height: 92, background: '#edf3ef', display: 'grid', placeItems: 'center', fontSize: 34 },
-  cardBody: { padding: 10, display: 'grid', gap: 4 },
-  panel: { background: '#fff', border: '1px solid #e0e7e3', borderRadius: 16, padding: 18, marginTop: 16 },
-  row: { display: 'flex', justifyContent: 'space-between', gap: 15 },
-  price: { fontSize: 28, whiteSpace: 'nowrap' },
-  hours: { display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 7, marginTop: 10 },
-  hour: { border: '1px solid #dce4e0', background: '#fff', borderRadius: 9, padding: 10, fontWeight: 900 },
-  hourActive: { border: '2px solid #0b6759', background: '#eef8f4', borderRadius: 9, padding: 9, fontWeight: 900 },
-  chips: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14, fontSize: 12, padding: 0 },
-  bizGrid: { display: 'grid', gridTemplateColumns: 'repeat(8,1fr)', gap: 8 },
-  biz: { border: '1px solid #dfe6e2', background: '#fff', borderRadius: 11, padding: '12px 6px', display: 'grid', gap: 4, textAlign: 'center' },
-  bizActive: { border: '2px solid #0b6759', background: '#eef8f4', borderRadius: 11, padding: '11px 5px', display: 'grid', gap: 4, textAlign: 'center' },
-  bizIcon: { fontSize: 24 },
-  inputs: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 },
-  label: { fontSize: 12, fontWeight: 800 },
-  input: { display: 'block', marginTop: 5, width: '100%', boxSizing: 'border-box', padding: 10, border: '1px solid #d9e1dd', borderRadius: 8, background: '#fff' },
-  freq: { display: 'flex', flexWrap: 'wrap', gap: 7 },
-  freqBtn: { border: '1px solid #dce4e0', background: '#fff', borderRadius: 9, padding: '9px 12px', fontWeight: 800 },
-  freqActive: { border: '2px solid #0b6759', background: '#eef8f4', borderRadius: 9, padding: '8px 11px', fontWeight: 900 },
-  quote: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: '#123d35', color: '#fff', borderRadius: 16, padding: 18, marginTop: 12 },
-  book: { position: 'sticky', bottom: 68, width: '100%', marginTop: 14, border: 0, borderRadius: 11, padding: 15, background: '#0b6759', color: '#fff', fontSize: 15, fontWeight: 950, boxShadow: '0 7px 22px rgba(0,0,0,.12)' },
-  message: { marginTop: 10, padding: 11, borderRadius: 9, background: '#eaf7f1', fontSize: 13 },
-  trust: { display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 20, padding: 18, color: '#68736f', fontSize: 11 },
-  nav: { position: 'fixed', bottom: 0, left: 0, right: 0, height: 62, background: '#fff', borderTop: '1px solid #e4ebe7', display: 'flex', justifyContent: 'center', gap: 70, zIndex: 20 },
-  navItem: { display: 'grid', placeItems: 'center', color: '#69746f', textDecoration: 'none', fontSize: 17 },
-  navOn: { display: 'grid', placeItems: 'center', color: '#0b6759', textDecoration: 'none', fontSize: 17 },
-};
-
-if (typeof window !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @media (max-width: 760px) {
-      .cleanops-unused { display:none; }
-    }
-    @media (max-width: 680px) {
-      body { margin: 0; }
-    }
-  `;
-  if (!document.head.querySelector('[data-cleanops-client-style]')) {
-    style.setAttribute('data-cleanops-client-style', 'true');
-    document.head.appendChild(style);
-  }
-}
+function Shell({children}){return <main className="co-app"><div className="co-phone">{children}</div><style>{CSS}</style></main>}
+const CSS=`*{box-sizing:border-box}body{margin:0}.co-app{min-height:100vh;background:#edf1ee;color:#17201c;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px 12px}.co-phone{width:min(100%,430px);min-height:calc(100vh - 48px);margin:auto;background:#fff;border-radius:28px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,.12);position:relative}.co-header{height:62px;padding:0 17px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #edf0ee;background:#fff;position:sticky;top:0;z-index:10}.co-back{border:0;background:none;font-size:30px;padding:0;line-height:1;cursor:pointer}.co-logo{font-size:22px;font-weight:900;color:#111;text-decoration:none;letter-spacing:-1px}.co-logo span{color:#07964d}.co-right{margin-left:auto;display:flex;align-items:center;gap:8px}.co-loc{border:0;background:none;color:#65716b;font-size:9px;max-width:145px;white-space:nowrap;overflow:hidden}.co-avatar{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#e8f4ec;color:#078c49;text-decoration:none}.co-title{position:absolute;left:50%;transform:translateX(-50%);font-size:13px;white-space:nowrap}.co-search{height:42px;margin:12px 17px;border:1px solid #dfe6e1;border-radius:10px;display:flex;align-items:center;gap:8px;padding:0 12px;color:#8a948f;font-size:12px}.co-hero{margin:0 17px 15px;border-radius:17px;overflow:hidden;background:#e8f6ed;display:grid;grid-template-columns:1.05fr .95fr;min-height:178px}.co-hero>div{padding:19px}.co-hero img{width:100%;height:100%;object-fit:cover}.co-kicker{font-size:8px;font-weight:900;letter-spacing:1px;color:#078348}.co-hero h1{font-size:29px;line-height:.98;letter-spacing:-1.6px;margin:6px 0}.co-hero p:last-child{font-size:10px;color:#66736c}.co-toggle{margin:5px 17px 18px;padding:3px;border-radius:9px;background:#eef1ef;display:flex}.co-toggle button{width:50%;border:0;background:none;border-radius:7px;padding:9px;font-size:11px;font-weight:900}.co-toggle .active{background:#07994f;color:#fff}.co-section{padding:0 17px}.co-section-head{display:flex;justify-content:space-between;align-items:end}.co-section-head h2{font-size:19px;margin:0}.co-section-head p{font-size:10px;color:#738078;margin:4px 0 11px}.co-section-head button{border:0;background:none;color:#078c49;font-size:10px;font-weight:900}.co-service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.co-service{border:1px solid #e0e6e2;border-radius:10px;background:#fff;padding:0;overflow:hidden;text-align:left;cursor:pointer}.co-service img{display:block;width:100%;height:88px;object-fit:cover}.co-service div{padding:8px}.co-service strong,.co-service small,.co-service span{display:block}.co-service strong{font-size:9px}.co-service small{font-size:7px;color:#76817b;margin-top:3px;min-height:18px}.co-service span{font-size:8px;color:#4c5852;margin-top:5px}.co-plan{margin:15px 17px;background:#e5f6eb;border-radius:11px;padding:13px;display:flex;justify-content:space-between;align-items:center}.co-plan b,.co-plan strong{display:block}.co-plan b{font-size:11px}.co-plan strong{font-size:9px;margin:4px 0}.co-plan button{border:0;border-radius:6px;background:#078f49;color:#fff;font-size:8px;font-weight:900;padding:7px 9px}.co-plan>span{font-size:35px}.co-bottom{position:sticky;bottom:0;height:62px;border-top:1px solid #e5ebe7;background:#fff;display:flex;justify-content:space-around;align-items:center}.co-bottom button,.co-bottom a{border:0;background:none;text-decoration:none;color:#68736d;display:grid;place-items:center;gap:3px;font-size:17px}.co-bottom small{font-size:8px}.co-bottom .active{color:#078f49}.co-cover{height:245px;position:relative}.co-cover img{width:100%;height:100%;object-fit:cover}.co-cover button{position:absolute;top:13px;width:34px;height:34px;border:0;border-radius:50%;background:#fff;font-size:17px}.co-cover button:first-of-type{right:54px}.co-cover button:last-of-type{right:13px}.co-content{padding:15px}.co-service-title{display:flex;justify-content:space-between;gap:8px}.co-service-title h1{font-size:22px;margin:0}.co-service-title p{font-size:10px;color:#68736d}.co-service-title>span{height:max-content;border:1px solid #07994f;color:#078c49;border-radius:7px;padding:5px 7px;font-size:8px}.co-start{font-size:12px}.co-start b{color:#078c49}.co-small{font-size:10px;color:#68736d}.co-content hr{border:0;border-top:1px solid #edf0ee;margin:15px 0}.co-line{display:flex;justify-content:space-between}.co-line h3,.co-content h3{font-size:13px;margin:0 0 9px}.co-line span{font-size:9px;color:#68736d}.co-hours{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.co-hours button{border:1px solid #dce4df;border-radius:9px;background:#fff;padding:10px 3px;font-size:10px;font-weight:800}.co-hours button.chosen{border:2px solid #07994f;background:#edf8f1;padding:9px 2px}.co-hours small{display:block;font-size:9px;margin-top:3px}.co-selected{margin:13px 0;background:#f1f8f3;border-radius:10px;padding:11px;display:flex;justify-content:space-between}.co-selected small,.co-selected strong,.co-selected span{display:block}.co-selected small{font-size:8px;color:#68736d}.co-selected strong{font-size:18px;color:#078c49}.co-selected span{font-size:9px}.co-list{list-style:none;padding:0;margin:9px 0 16px}.co-list li{font-size:10px;margin:8px 0}.co-list li:before{content:"✓";color:#078c49;font-weight:900;margin-right:8px}.co-primary{width:100%;border:0;border-radius:9px;background:#07994f;color:#fff;padding:13px;font-size:12px;font-weight:900;cursor:pointer}.co-primary b{float:right}.co-book{padding:0 15px 22px}.co-book>h3{font-size:13px;margin:18px 0 9px}.co-summary{margin:12px 0 18px;padding:9px;border:1px solid #e0e6e2;border-radius:9px;background:#f8faf9;display:flex;align-items:center;gap:8px}.co-summary img{width:50px;height:44px;object-fit:cover;border-radius:6px}.co-summary div{flex:1}.co-summary b,.co-summary span{display:block}.co-summary b{font-size:10px}.co-summary span{font-size:8px;color:#68736d;margin-top:3px}.co-summary>strong{font-size:13px}.co-book input,.co-book textarea{width:100%;padding:11px;border:1px solid #dce4df;border-radius:8px;background:#fff;font:inherit;font-size:10px}.co-time{display:grid;grid-template-columns:1fr 1fr;gap:8px}.co-time button{border:1px solid #dce4df;background:#fff;border-radius:8px;padding:10px 4px;font-size:8px}.co-time button.chosen{border-color:#07994f;background:#edf8f1}.co-address{border:1px solid #dce4df;border-radius:9px;padding:11px;display:grid;grid-template-columns:1fr auto;gap:4px}.co-address b{font-size:10px}.co-address button{border:0;background:none;color:#078c49;font-size:9px;font-weight:900}.co-address span{grid-column:1/-1;font-size:8px;color:#66726b;line-height:1.5}.co-book textarea{min-height:65px;resize:none}.co-total{margin:17px 0 10px;padding:12px 0;border-top:1px solid #edf0ee;display:flex;justify-content:space-between}.co-total span{font-size:11px}.co-total strong{font-size:17px}.co-secure{text-align:center;font-size:8px;color:#68736d}.co-message{margin:9px 0;padding:10px;border-radius:8px;background:#edf8f1;font-size:9px}.co-page-title{padding:22px 18px 11px}.co-page-title h1{font-size:23px;margin:0}.co-page-title p{font-size:10px;color:#6d7972}.co-business-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:7px 18px}.co-business-grid button{border:1px solid #e0e6e2;background:#fff;border-radius:10px;padding:13px 5px;display:grid;gap:4px;text-align:center;cursor:pointer}.co-business-grid span{font-size:26px}.co-business-grid b{font-size:10px}.co-business-grid small{font-size:7px;color:#78827d}.co-help{margin:17px 18px;background:#f0f9f3;border:1px solid #d9ecdf;border-radius:9px;padding:11px;display:flex;gap:9px;align-items:center;font-size:17px}.co-help div{display:grid;flex:1}.co-help b{font-size:10px}.co-help span{font-size:8px;color:#69746e}.co-form{padding:0 18px}.co-form label{display:block;position:relative;font-size:9px;font-weight:900;margin:14px 0}.co-form input,.co-form select{display:block;width:100%;margin-top:5px;padding:11px;border:1px solid #dce4df;border-radius:8px;background:#fff;font-size:10px}.co-form label>span{position:absolute;right:10px;bottom:10px;color:#69746e;font-size:8px}.co-recommend{margin:16px 18px;background:#edf8f1;border-radius:11px;padding:13px;position:relative}.co-recommend small,.co-recommend strong,.co-recommend>b{display:block}.co-recommend small{font-size:8px;color:#078c49}.co-recommend strong{font-size:20px;margin:4px 0}.co-recommend>b{font-size:9px}.co-faces{position:absolute;right:12px;top:22px;font-size:21px}.co-margin{margin:0 18px;width:calc(100% - 36px)}.co-plan-section{padding:0 18px 24px}.co-plan-section h3{font-size:13px;margin:18px 0 9px}.co-worker-list{border:1px solid #dfe6e1;border-radius:9px;overflow:hidden}.co-worker-list>b{display:block;padding:10px;font-size:10px}.co-worker-list>div{padding:9px;border-top:1px solid #edf0ee;display:flex;gap:8px;font-size:14px}.co-worker-list span{display:grid}.co-worker-list div b{font-size:9px}.co-worker-list small{font-size:8px;color:#68736d}.co-plan-section .co-total{margin-top:14px}.co-plan-section .co-total em{display:block;font-size:8px;color:#68736d;font-style:normal;margin-left:auto}.co-plan-section .co-total strong small{font-size:8px;font-weight:500}@media(max-width:460px){.co-app{padding:0;background:#fff}.co-phone{width:100%;min-height:100vh;border-radius:0;box-shadow:none}.co-screen{min-height:100vh}}
+`;
