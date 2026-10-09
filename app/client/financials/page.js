@@ -8,6 +8,7 @@ export default function Financials() {
   const [invoices, setInvoices] = useState([]);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState('');
 
   async function load() {
     setLoading(true);
@@ -16,6 +17,53 @@ export default function Financials() {
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
+
+  async function payInvoice(invoice) {
+    setMsg('');
+    setPaying(invoice.id);
+    try {
+      const orderResponse = await fetch('/api/payments/order', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ invoiceId: invoice.id }) });
+      const orderResult = await orderResponse.json();
+      if (!orderResponse.ok) throw new Error(orderResult.error || 'Could not start payment');
+      if (!window.Razorpay) {
+        await new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-razorpay-checkout]');
+          if (existing) { existing.addEventListener('load', resolve, { once:true }); existing.addEventListener('error', reject, { once:true }); return; }
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.dataset.razorpayCheckout = 'true';
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('Payment checkout could not be loaded. Check your connection and retry.'));
+          document.body.appendChild(script);
+        });
+      }
+      if (!window.Razorpay) throw new Error('Payment checkout is unavailable. Please retry.');
+      const checkout = new window.Razorpay({
+        key: orderResult.data.keyId,
+        amount: orderResult.data.amount,
+        currency: orderResult.data.currency,
+        name: 'CleanOps Pro',
+        description: 'Invoice ' + orderResult.data.invoiceNumber,
+        order_id: orderResult.data.orderId,
+        theme: { color: '#0d6b61' },
+        handler: async response => {
+          try {
+            const verifyResponse = await fetch('/api/payments/verify', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(response) });
+            const verified = await verifyResponse.json();
+            if (!verifyResponse.ok) throw new Error(verified.error || 'Payment verification failed');
+            setMsg('Payment verified successfully.');
+            await load();
+          } catch (error) { setMsg(error.message || 'Payment verification failed. Contact support before paying again.'); }
+          finally { setPaying(''); }
+        },
+        modal: { ondismiss: () => setPaying('') }
+      });
+      checkout.open();
+    } catch (error) {
+      setMsg(error.message || 'Unable to start payment');
+      setPaying('');
+    }
+  }
 
   const totals = useMemo(() => invoices.reduce((a, i) => {
     const paid = (i.payments || []).filter(p => p.status === 'SUCCESS').reduce((s,p) => s + Number(p.amount), 0);
@@ -30,7 +78,7 @@ export default function Financials() {
       {[['Total billed',totals.billed],['Paid',totals.paid],['Outstanding',totals.outstanding]].map(([t,v])=><article key={t} style={{border:'1px solid #e5eaee',borderRadius:14,padding:18}}><small style={{color:'#64748b'}}>{t}</small><h2 style={{margin:'8px 0'}}>{money(v)}</h2></article>)}
     </section>
     <section style={{border:'1px solid #e5eaee',borderRadius:14,overflow:'auto'}}>
-      {loading ? <p style={{padding:20}}>Loading invoices…</p> : invoices.length === 0 ? <p style={{padding:20}}>No invoices available.</p> : <table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr>{['Invoice','Contract','Amount','Paid','Balance','Due','Status'].map(h=><th key={h} style={{textAlign:'left',padding:14,borderBottom:'1px solid #e5eaee',fontSize:13}}>{h}</th>)}</tr></thead><tbody>{invoices.map(i=>{const paid=(i.payments||[]).filter(p=>p.status==='SUCCESS').reduce((s,p)=>s+Number(p.amount),0); const balance=Math.max(0,Number(i.amount)-paid); return <tr key={i.id}><td style={{padding:14}}><strong>{i.invoiceNumber}</strong></td><td style={{padding:14}}>{i.contract?.name || '—'}</td><td style={{padding:14}}>{money(i.amount,i.currency)}</td><td style={{padding:14}}>{money(paid,i.currency)}</td><td style={{padding:14}}>{money(balance,i.currency)}</td><td style={{padding:14}}>{i.dueDate ? new Date(i.dueDate).toLocaleDateString('en-IN') : '—'}</td><td style={{padding:14}}><span style={{padding:'5px 8px',borderRadius:999,background:'#f1f5f9'}}>{labels[i.status] || i.status}</span></td></tr>})}</tbody></table>}
+      {loading ? <p style={{padding:20}}>Loading invoices…</p> : invoices.length === 0 ? <p style={{padding:20}}>No invoices available.</p> : <table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr>{['Invoice','Contract','Amount','Paid','Balance','Due','Status','Action'].map(h=><th key={h} style={{textAlign:'left',padding:14,borderBottom:'1px solid #e5eaee',fontSize:13}}>{h}</th>)}</tr></thead><tbody>{invoices.map(i=>{const paid=(i.payments||[]).filter(p=>p.status==='SUCCESS').reduce((s,p)=>s+Number(p.amount),0); const balance=Math.max(0,Number(i.amount)-paid); return <tr key={i.id}><td style={{padding:14}}><strong>{i.invoiceNumber}</strong></td><td style={{padding:14}}>{i.contract?.name || '—'}</td><td style={{padding:14}}>{money(i.amount,i.currency)}</td><td style={{padding:14}}>{money(paid,i.currency)}</td><td style={{padding:14}}>{money(balance,i.currency)}</td><td style={{padding:14}}>{i.dueDate ? new Date(i.dueDate).toLocaleDateString('en-IN') : '—'}</td><td style={{padding:14}}><span style={{padding:'5px 8px',borderRadius:999,background:'#f1f5f9'}}>{labels[i.status] || i.status}</span></td><td style={{padding:14}}>{balance>0&&!['VOID','CANCELLED'].includes(i.status)?<button disabled={paying===i.id} onClick={()=>payInvoice(i)} style={{padding:'9px 12px',border:0,borderRadius:8,background:'#0d6b61',color:'#fff',fontWeight:800,whiteSpace:'nowrap'}}>{paying===i.id?'Opening…':'Pay online'}</button>:<span style={{color:'#64748b'}}>—</span>}</td></tr>})}</tbody></table>}
     </section>
   </main>;
 }

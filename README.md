@@ -1,64 +1,62 @@
 # CleanOps Pro
 
-B2B commercial cleaning operations platform for schools, hospitals, offices, hotels, factories, warehouses, retail facilities, residential communities and other institutional customers.
+CleanOps Pro is a multi-tenant commercial-cleaning operations platform for institutional facilities: hospitals, schools, offices, hotels, factories, warehouses, retail sites and residential communities. It supports the customer request-to-cash lifecycle and a separate internal operations workspace.
 
-## Product model
+## Core workflows
 
-CleanOps Pro is designed as a managed B2B service platform rather than a simple consumer booking marketplace.
+- Customer requests and facility records
+- Commercial quote creation and quote acceptance
+- Contract conversion and recurring service planning
+- Job scheduling, worker assignment, attendance check-in/check-out
+- SOP/checklist generation and quality inspection
+- Failed-inspection rework queue
+- Invoice issuance, payment receipt recording and Razorpay checkout
+- Tenant-scoped complaints, notifications and audit events
+- Voice/typed service concierge in the customer portal
 
-**Customer request → assessment → quotation → contract → scheduling → professional team → checklist → inspection → billing**
+## Stack
 
-## Product surfaces
+- Next.js App Router and React
+- PostgreSQL with Prisma migrations
+- Cookie-based sessions with PBKDF2 password hashing
+- GitHub Actions CI and production gate
 
-- Client Portal — organizations, facilities, service requests, quotations, contracts, schedules, complaints and invoices.
-- Professional App — onboarding, verification, classification, assignments, check-in/out, SOPs, evidence and earnings.
-- Admin Operations Console — workforce, sites, contracts, scheduling, quality, billing and profitability.
+## Local setup
 
-## Initial MVP
+1. Install Node.js 22+ and PostgreSQL.
+2. Copy `.env.example` to `.env` and set a real database URL and a long random `SESSION_SECRET`.
+3. Install dependencies: `npm ci`
+4. Generate Prisma client: `npm run db:generate`
+5. Apply migrations: `npm run db:deploy`
+6. Seed development data if needed: `npm run db:seed`
+7. Run tests: `npm test`
+8. Start development: `npm run dev`
 
-The repository starts with a responsive browser prototype in `index.html` that demonstrates the operations control center and core workflows.
+For a production build, run `npm run build` then `npm start`.
 
-## Planned production architecture
+## Production environment
 
-- Web client: responsive React/Next.js application
-- API: Node.js/TypeScript service layer
-- Database: PostgreSQL or MongoDB depending on final domain model decision
-- Object storage: S3-compatible storage for documents and before/after evidence
-- Authentication: secure role-based identity with organization/tenant isolation
-- Payments: India-ready payment gateway abstraction
-- Notifications: email/SMS/WhatsApp/push abstraction
-- Maps/GPS: site geofencing and attendance verification
-- Observability: structured logs, audit events, health/readiness checks
-- AI layer: facility assessment, quoting assistance, workforce assignment and quality intelligence
+Required:
+- `DATABASE_URL`: managed PostgreSQL connection string
+- `SESSION_SECRET`: long random secret; never reuse a sample or commit the real value
+- `NEXT_PUBLIC_APP_URL`: canonical HTTPS application URL
 
-## Roles
+Optional for online payments:
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
 
-- Platform Admin
-- Operations Manager
-- Facility/Account Manager
-- Site Supervisor
-- Cleaning Professional
-- Finance/Billing Manager
-- Client Organization Admin
-- Client Facility Manager
+The application applies payment signatures server-side and confirms the Razorpay payment is captured and matches the invoice amount before marking an invoice paid. Do not expose the secret in browser code. If Razorpay credentials are absent, online checkout is disabled and should report that configuration is missing.
 
-## Development principles
+## Release checklist
 
-1. B2B-first and contract-first.
-2. Every operational action should be auditable.
-3. Facility-specific SOPs and service-level agreements are first-class entities.
-4. Worker verification and professional classification are core trust infrastructure.
-5. Tenant and role isolation must be enforced server-side.
-6. Do not hardcode secrets or production credentials.
-7. Build mobile-friendly workflows for professionals from the start.
+- Configure production secrets and managed PostgreSQL.
+- Back up the database before applying migrations.
+- Deploy the application and verify `/api/health` and `/api/ready`.
+- Set the GitHub repository secret `STAGING_BASE_URL` to a real HTTPS staging deployment URL to enable external staging smoke checks.
+- Configure Razorpay credentials and run a test-mode payment end-to-end before enabling live keys.
+- Verify email/SMS/WhatsApp provider credentials before promising outbound notifications; in-app notifications are persisted.
+- Test tenant isolation, customer onboarding, quote acceptance, contracts, assignment, QA/rework and invoice payment using separate customer and operations accounts.
 
-## Live application surfaces
+## Important boundaries
 
-- Public commercial-cleaning landing: `/`
-- Customer login: `/login` (also `/customer-login`)
-- Customer portal: `/client`
-- CleanOps team login: `/team-login`
-- CleanOps internal control center: `/ops`
-- Professional mobile-oriented work area: `/professional`
-
-For staging, set `CLEANOPS_BOOTSTRAP_TEAM_EMAIL` and `CLEANOPS_BOOTSTRAP_TEAM_PASSWORD` in the hosting environment to provision the first internal Platform Admin. Never use shared/default credentials in production.
+A successful CI run verifies migration, tests and production build in the CI environment; it does not prove a live deployment is reachable. Payment collection requires the account owner to configure Razorpay credentials. External provider accounts, DNS, legal approvals and production data cannot be created from repository code alone.

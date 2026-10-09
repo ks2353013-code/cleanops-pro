@@ -76,3 +76,34 @@ export async function POST(req) {
       e?.status || (e?.message === 'UNAUTHENTICATED' ? 401 : 500));
   }
 }
+
+export async function PATCH(req) {
+  try {
+    const user = await requireUser();
+    if (!STAFF.includes(user.role)) return error('Operations access required', 403);
+    const body = await req.json();
+    const id = typeof body.id === 'string' ? body.id.trim() : '';
+    const status = String(body.status || '').toUpperCase();
+    if (!id || !['ACTIVE', 'PAUSED', 'TERMINATED'].includes(status)) return error('id and valid contract status are required', 400);
+    const current = await prisma.contract.findFirst({
+      where: { id, ...(user.role === 'PLATFORM_ADMIN' ? {} : { organizationId: user.organizationId }) }
+    });
+    if (!current) return error('Contract not found', 404);
+    const allowed = current.status === 'DRAFT' ? ['ACTIVE', 'TERMINATED']
+      : current.status === 'ACTIVE' ? ['PAUSED', 'TERMINATED']
+      : current.status === 'PAUSED' ? ['ACTIVE', 'TERMINATED'] : [];
+    if (!allowed.includes(status)) return error('Invalid contract status transition', 409);
+    const data = await prisma.$transaction(async tx => {
+      const updated = await tx.contract.update({ where: { id }, data: { status }, include: { facility: true } });
+      await tx.auditEvent.create({ data: {
+        organizationId: current.organizationId, actorUserId: user.id, action: 'CONTRACT_STATUS_CHANGED',
+        entityType: 'Contract', entityId: id, metadata: { from: current.status, to: status }
+      }});
+      return updated;
+    });
+    return Response.json({ data });
+  } catch (e) {
+    return error(e?.message === 'UNAUTHENTICATED' ? 'Authentication required' : 'Unable to update contract',
+      e?.message === 'UNAUTHENTICATED' ? 401 : 500);
+  }
+}
