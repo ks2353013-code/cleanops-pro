@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { db } from './db';
 
 const COOKIE='cleanops_session';
-const secret=()=>process.env.SESSION_SECRET||process.env.AUTH_SECRET||'change-this-in-production';
+const secret=()=>{const value=process.env.SESSION_SECRET||process.env.AUTH_SECRET;if(value)return value;if(process.env.NODE_ENV==='production')throw new Error('SESSION_SECRET or AUTH_SECRET must be configured in production');return 'cleanops-local-development-secret-only';};
 const b64=(v)=>Buffer.from(v).toString('base64url');
 const unb64=(v)=>Buffer.from(v,'base64url');
 
