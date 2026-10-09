@@ -8,8 +8,22 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cleanops
+          POSTGRES_PASSWORD: cleanops_ci
+          POSTGRES_DB: cleanops_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cleanops -d cleanops_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     env:
-      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      DATABASE_URL: postgresql://cleanops:cleanops_ci@localhost:5432/cleanops_ci?schema=public
       BASE_URL: ${{ secrets.STAGING_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +31,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - run: npm run db:generate
       - run: npm run db:deploy
       - run: npm test
