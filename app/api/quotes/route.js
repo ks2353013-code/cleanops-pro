@@ -106,6 +106,14 @@ export async function POST(req) {
           metadata: { requestId, frequency, staffingCount, validUntil: validUntil.toISOString() }
         }
       });
+      await tx.automationJob.create({
+        data: {
+          organizationId: requestRecord.organizationId,
+          eventKey: `quote-created:${quote.id}`,
+          eventType: 'QUOTE_CREATED',
+          payload: { quoteId: quote.id, requestId, validUntil: validUntil.toISOString() }
+        }
+      });
       return quote;
     });
 
