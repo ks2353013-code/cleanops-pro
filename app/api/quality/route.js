@@ -1,5 +1,5 @@
-import { prisma } from '../../lib/prisma';
-import { requireUser } from '../../src/lib/auth';
+import { prisma } from '../../../lib/prisma';
+import { requireUser } from '../../../src/lib/auth';
 
 const OPS = ['PLATFORM_ADMIN', 'OPERATIONS_MANAGER', 'SUPERVISOR'];
 const fail = (message, status = 400) => Response.json({ error: message }, { status });
