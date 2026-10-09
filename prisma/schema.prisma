@@ -96,6 +96,14 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum AutomationJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  RETRY
+  DEAD_LETTER
+}
+
 model Organization {
   id          String           @id @default(cuid())
   name        String
