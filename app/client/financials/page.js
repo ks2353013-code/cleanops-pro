@@ -7,7 +7,8 @@ const labels = { ISSUED:'Issued', SENT:'Sent', PARTIALLY_PAID:'Partially paid', 
 export default function Financials() {
   const [invoices, setInvoices] = useState([]);
   const [msg, setMsg] = useState('');
-  const [loading, setLoading] = useState(true);\n  const [paying, setPaying] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState('');
 
   async function load() {
     setLoading(true);
