@@ -94,6 +94,14 @@ export async function POST(req) {
           metadata: { facilityId: facility.id, serviceName }
         }
       });
+      await tx.automationJob.create({
+        data: {
+          organizationId: user.organizationId,
+          eventKey: `service-request-created:${request.id}`,
+          eventType: 'SERVICE_REQUEST_CREATED',
+          payload: { requestId: request.id, customerId: user.id, facilityId: facility.id, serviceName }
+        }
+      });
       return request;
     });
     return Response.json({ data: result }, { status: 201 });
