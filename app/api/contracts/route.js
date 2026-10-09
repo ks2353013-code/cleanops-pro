@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const user = await requireUser();
     if (!user.organizationId && user.role !== 'PLATFORM_ADMIN') return error('Organization required', 403);
-    if (!['PLATFORM_ADMIN','OPERATIONS_MANAGER','SUPERVISOR','CLIENT_MANAGER','CUSTOMER'].includes(user.role)) return error('Forbidden', 403);
+    if (!['PLATFORM_ADMIN','OPERATIONS_MANAGER','SUPERVISOR','CLIENT_MANAGER'].includes(user.role)) return error('Forbidden', 403);
     const where = user.role === 'PLATFORM_ADMIN' ? {} : { organizationId: user.organizationId };
     const data = await prisma.contract.findMany({
       where,
