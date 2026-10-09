@@ -1,7 +1,10 @@
-import { cookies } from 'next/headers';
+import { requireUser } from '../../../../src/lib/auth';
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('cleanops_session');
-  return Response.json({ authenticated: Boolean(session), role: session ? 'PLATFORM_ADMIN' : null });
+  try {
+    const user = await requireUser();
+    return Response.json({ authenticated: true, role: user.role, user: { id: user.id, name: user.name, email: user.email, organizationId: user.organizationId } });
+  } catch {
+    return Response.json({ authenticated: false, role: null }, { status: 401 });
+  }
 }
