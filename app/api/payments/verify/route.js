@@ -7,6 +7,7 @@ const fail = (message, status = 400) => Response.json({ error: message }, { stat
 export async function POST(req) {
   try {
     const user = await requireUser();
+    if (!['CUSTOMER', 'CLIENT_MANAGER', 'PLATFORM_ADMIN', 'OPERATIONS_MANAGER'].includes(user.role)) return fail('Payment access required', 403);
     const secret = process.env.RAZORPAY_KEY_SECRET;
     if (!secret) return fail('Online payments are not configured yet', 503);
     const body = await req.json();
@@ -18,10 +19,20 @@ export async function POST(req) {
     const expectedBuffer = Buffer.from(expected);
     const suppliedBuffer = Buffer.from(signature);
     if (expectedBuffer.length !== suppliedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, suppliedBuffer)) return fail('Payment signature verification failed', 400);
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    if (!keyId) return fail('Online payments are not configured yet', 503);
+    const providerResponse = await fetch('https://api.razorpay.com/v1/payments/' + encodeURIComponent(paymentId), {
+      headers: { Authorization: 'Basic ' + Buffer.from(keyId + ':' + secret).toString('base64') },
+      cache: 'no-store'
+    });
+    const providerPayment = await providerResponse.json().catch(() => ({}));
+    if (!providerResponse.ok || providerPayment.order_id !== orderId) return fail('Payment provider could not confirm this payment', 502);
+    if (providerPayment.status !== 'captured') return fail('Payment has not been captured yet; invoice remains unpaid', 409);
     const pending = await prisma.payment.findUnique({ where: { reference: 'rzp_order_' + orderId }, include: { invoice: true } });
     if (!pending || (user.role !== 'PLATFORM_ADMIN' && pending.organizationId !== user.organizationId)) return fail('Payment order not found', 404);
     if (pending.status === 'SUCCESS') return Response.json({ data: { status: 'SUCCESS', invoiceId: pending.invoiceId } });
     if (pending.status !== 'PENDING') return fail('Payment order is no longer payable', 409);
+    if (providerPayment.currency !== pending.currency || Number(providerPayment.amount) !== Math.round(Number(pending.amount) * 100)) return fail('Payment amount does not match invoice balance', 409);
     const result = await prisma.$transaction(async tx => {
       const duplicate = await tx.payment.findUnique({ where: { reference: paymentId } });
       if (duplicate) {
