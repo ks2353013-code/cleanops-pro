@@ -117,6 +117,7 @@ model Organization {
   inspections Inspection[]
   reworks     Rework[]
   payments    Payment[]
+  complaints  Complaint[]
 }
 
 model User {
@@ -150,6 +151,7 @@ model Facility {
   requests       ServiceRequest[]
   contracts      Contract[]
   jobs           Job[]
+  complaints     Complaint[]
 }
 
 model ServiceRequest {
@@ -359,4 +361,22 @@ model Attendance {
   recordedAt  DateTime @default(now())
   @@index([jobId, recordedAt])
   @@index([workerId, recordedAt])
+}
+
+model Complaint {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  facilityId      String?
+  facility        Facility?    @relation(fields: [facilityId], references: [id])
+  createdByUserId String
+  description     String
+  severity        String       @default("MEDIUM")
+  status          String       @default("OPEN")
+  resolution      String?
+  resolvedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  @@index([organizationId, status, createdAt])
+  @@index([facilityId, createdAt])
 }
