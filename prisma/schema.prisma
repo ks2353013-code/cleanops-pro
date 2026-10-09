@@ -96,6 +96,14 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum AutomationJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  RETRY
+  DEAD_LETTER
+}
+
 model Organization {
   id          String           @id @default(cuid())
   name        String
@@ -302,5 +310,24 @@ model AuditEvent {
   entityId       String?
   metadata       Json?
   createdAt      DateTime @default(now())
+  @@index([organizationId, createdAt])
+}
+
+model AutomationJob {
+  id             String              @id @default(cuid())
+  organizationId String?
+  eventKey       String              @unique
+  eventType      String
+  payload        Json
+  status         AutomationJobStatus @default(PENDING)
+  attempts       Int                 @default(0)
+  maxAttempts    Int                 @default(5)
+  runAt          DateTime            @default(now())
+  lockedAt       DateTime?
+  completedAt    DateTime?
+  lastError      String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  @@index([status, runAt])
   @@index([organizationId, createdAt])
 }
